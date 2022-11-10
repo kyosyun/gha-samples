@@ -1,0 +1,58 @@
+# tagを打った際に、前回のtagとの差分をreleaseとして作成
+name: CreatePrForRelease
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GH_TOKEN: ${{ secrets.OAUTH_TOKEN }}
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Unshallow
+        run: git fetch --prune --unshallow
+
+
+      - name: Get the version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Get commit summary
+        id: get_commit_summary
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-creatordate | sed -n 2p)
+          echo "PREVIOUS_TAG: $PREVIOUS_TAG"
+          COMMIT_SUMMARY="$(git log --oneline --pretty=tformat:"%h %s" $PREVIOUS_TAG..${{ github.ref }})"
+          echo "COMMIT_SUMMARY=${COMMIT_SUMMARY}" >> $GITHUB_OUTPUT
+
+      - name: create release pr
+        run: |
+          echo ${{ github.ref_name}}
+          echo "tag_name: ${{ steps.get_version.outputs.VERSION }}"
+          gh pr create -B main -H develop -t "develop to main ${{steps.get_version.outputs.VERSION}}" -b "release ${{steps.get_version.outputs.VERSION}}"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.OAUTH_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          release_name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ${{ steps.get_commit_summary.outputs.COMMIT_SUMMARY }}
+          draft: false
+          prerelease: false
+
+#       # リリース用PRを作成
+#       - name: tag
+#         run: |
+#           git tag tag-${{ github.head_ref }}
+#           git push origin tag-${{ github.head_ref }}
