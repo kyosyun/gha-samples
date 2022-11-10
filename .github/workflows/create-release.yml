@@ -29,9 +29,9 @@ jobs:
         run: |
           PREVIOUS_TAG=$(git tag --sort=-creatordate | sed -n 2p)
           echo "PREVIOUS_TAG: $PREVIOUS_TAG"
-          echo 'COMMIT_SUMMARY<<EOF' >> $GITHUB_OUTPUT
+          echo 'COMMIT_SUMMARY<<EOF_FOR_GHA' >> $GITHUB_OUTPUT
           git log --oneline --pretty=tformat:"%h %s" $PREVIOUS_TAG..${{ github.ref }} >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
+          echo 'EOF_FOR_GHA' >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release
